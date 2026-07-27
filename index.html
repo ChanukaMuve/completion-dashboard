@@ -1,0 +1,1002 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --bg:#04161E;
+    --bg-elev:#0A2530;
+    --bg-elev2:#0F303D;
+    --line:#1B4655;
+    --line-soft:#123340;
+    --ink:#EAF4F2;
+    --ink-soft:#8FADB5;
+    --ink-faint:#5E7A82;
+    --lime:#E7FF4E;
+    --lime-deep:#C3DE1F;
+    --sea:#2FE0B0;
+    --sea-deep:#1FB68E;
+    --nova:#8FA4FF;
+    --amber:#FFC160;
+    --amber-bg:rgba(255,193,96,0.14);
+    --green-bg:rgba(47,224,176,0.14);
+    --red:#FF7A7A;
+    --red-bg:rgba(255,122,122,0.14);
+    --grey-bg:rgba(143,173,181,0.12);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  .dash-root{
+    background:
+      radial-gradient(circle at 85% -10%, rgba(231,255,78,0.06) 0%, transparent 45%),
+      radial-gradient(circle at -5% 20%, rgba(47,224,176,0.05) 0%, transparent 40%),
+      var(--bg);
+    color:var(--ink);
+    min-height:100%;
+    font-size:14px;
+    line-height:1.45;
+  }
+
+  .dash-header{
+    padding:24px 28px 0;
+  }
+  .dash-eyebrow{
+    text-transform:uppercase;font-size:11px;letter-spacing:0.16em;
+    color:var(--lime);font-weight:700;margin-bottom:6px;
+  }
+  .dash-title{font-size:22px;font-weight:800;letter-spacing:-0.015em;color:#FFFFFF;}
+
+  /* ---- HERO: who are you ---- */
+  .hero{
+    margin:18px 28px 0;
+    background:linear-gradient(135deg, var(--bg-elev) 0%, var(--bg-elev2) 100%);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:22px 24px;
+    display:flex;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+  .hero-prompt{flex:1;min-width:240px;}
+  .hero-prompt .h-label{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.1em;
+    color:var(--sea);font-weight:700;margin-bottom:8px;
+  }
+  .fe-picker{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  .combo-wrap{position:relative;min-width:280px;}
+  .combo-wrap input{
+    width:100%;
+    font-size:18px;
+    font-weight:700;
+    padding:13px 44px 13px 16px;
+    border-radius:12px;
+    border:2px solid var(--sea-deep);
+    background:var(--bg-elev2);
+    color:#fff;
+    box-sizing:border-box;
+  }
+  .combo-wrap input::placeholder{color:var(--ink-faint);font-weight:600;}
+  .combo-wrap input:focus{outline:2px solid var(--lime);outline-offset:2px;}
+  .combo-caret{
+    position:absolute;right:16px;top:50%;transform:translateY(-50%);
+    width:15px;height:15px;stroke:var(--sea);pointer-events:none;
+  }
+  .combo-list{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;right:0;
+    max-height:260px;
+    overflow-y:auto;
+    background:var(--bg-elev2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:0 12px 28px rgba(0,0,0,0.45);
+    z-index:30;
+  }
+  .combo-list.show{display:block;}
+  .combo-option{
+    padding:10px 16px;
+    font-size:14px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .combo-option:hover, .combo-option.active{background:rgba(47,224,176,0.12);color:#fff;}
+  .combo-option.clear-option{color:var(--ink-soft);border-bottom:1px solid var(--line-soft);font-style:italic;}
+  .combo-empty{padding:10px 16px;font-size:13px;color:var(--ink-faint);}
+  .combo-match{color:var(--lime);font-weight:700;}
+  #dateSelectHero{
+    font-size:15px;
+    font-weight:600;
+    padding:12px 40px 12px 15px;
+    border-radius:12px;
+    border:1.5px solid var(--line);
+    background:var(--bg-elev2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238FADB5' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 14px center;
+    appearance:none;
+    color:var(--ink);
+    min-width:200px;
+    cursor:pointer;
+  }
+  #dateSelectHero:focus{outline:2px solid var(--lime);outline-offset:2px;}
+  .view-toggle{
+    display:flex;gap:6px;background:var(--bg-elev2);
+    border:1px solid var(--line);border-radius:10px;padding:3px;
+  }
+  .view-toggle button{
+    border:none;background:transparent;color:var(--ink-soft);
+    padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .view-toggle button.active{background:var(--sea);color:#04161E;}
+
+  .hero-stats{
+    display:flex;gap:14px;flex-wrap:wrap;
+  }
+  .hstat{
+    text-align:center;min-width:88px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--line-soft);
+    border-radius:12px;padding:10px 14px;
+  }
+  .hstat .n{font-size:22px;font-weight:800;color:#fff;}
+  .hstat .l{font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-top:2px;}
+  .hstat.pending .n{color:var(--amber);}
+  .hstat.blocked .n{color:var(--red);}
+  .hstat.approved .n{color:var(--sea);}
+
+  .greeting{
+    font-size:13px;color:var(--ink-soft);margin-top:2px;
+  }
+  .greeting b{color:var(--lime);}
+
+  .dash-body{padding:20px 28px 28px;}
+
+  /* quick search always visible */
+  .quick-row{
+    display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px;
+  }
+  .search-wrap{position:relative;flex:1;min-width:220px;max-width:340px;}
+  .search-wrap svg{
+    position:absolute;left:12px;top:50%;transform:translateY(-50%);
+    width:15px;height:15px;stroke:var(--ink-faint);pointer-events:none;
+  }
+  .search-wrap input{
+    width:100%;padding:10px 12px 10px 34px;border-radius:10px;
+    border:1px solid var(--line);background:var(--bg-elev2);color:var(--ink);font-size:13.5px;
+  }
+  .search-wrap input:focus{outline:2px solid var(--lime);outline-offset:1px;}
+  .search-wrap input::placeholder{color:var(--ink-faint);}
+
+  .more-filters-toggle{
+    border:1px solid var(--line);background:var(--bg-elev);color:var(--ink-soft);
+    padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+  }
+  .more-filters-toggle:hover{color:var(--ink);}
+  .more-filters-toggle svg{width:13px;height:13px;stroke:currentColor;transition:transform .15s;}
+  .more-filters-toggle.open svg{transform:rotate(180deg);}
+
+  .clear-btn{
+    border:1px solid var(--line);background:transparent;color:var(--ink-soft);
+    padding:9px 14px;border-radius:10px;font-size:12.5px;cursor:pointer;font-weight:600;
+  }
+  .clear-btn:hover{background:var(--bg-elev2);color:var(--ink);}
+  .result-count{font-size:12.5px;color:var(--ink-soft);margin-left:auto;}
+
+  .more-filters{
+    display:none;
+    background:var(--bg-elev);border:1px solid var(--line);border-radius:14px;
+    padding:14px 16px;margin-bottom:14px;gap:16px;flex-wrap:wrap;align-items:flex-end;
+  }
+  .more-filters.show{display:flex;}
+  .filter-field{display:flex;flex-direction:column;gap:6px;}
+  .filter-field label{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);font-weight:600;
+  }
+  .filter-field select{
+    border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;
+    color:var(--ink);background:var(--bg-elev2);min-width:170px;
+  }
+  .filter-field select:focus{outline:2px solid var(--lime);outline-offset:1px;}
+
+  .table-wrap{
+    background:var(--bg-elev);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  }
+  table{width:100%;border-collapse:collapse;}
+  thead th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--sea);background:var(--bg-elev2);padding:12px 15px;
+    border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none;
+  }
+  thead th:hover{color:var(--lime);}
+  thead th .arrow{font-size:9px;margin-left:3px;opacity:0.55;}
+  tbody td{
+    padding:13px 15px;border-bottom:1px solid var(--line-soft);font-size:13.5px;
+    white-space:nowrap;color:var(--ink);
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr{transition:background .12s;}
+  tbody tr:hover{background:rgba(47,224,176,0.05);}
+  tbody tr.needs-attention td:first-child{box-shadow:inset 3px 0 0 var(--amber);}
+  .case-id{font-family:'SF Mono','Roboto Mono',monospace;font-weight:700;color:var(--lime);}
+
+  .fe-name{font-weight:500;}
+  .product-badge{
+    display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.03em;
+    padding:2px 7px;border-radius:999px;margin-left:7px;vertical-align:1px;
+  }
+  .product-badge.nova{background:rgba(143,164,255,0.15);color:var(--nova);}
+  .product-badge.muve{background:rgba(231,255,78,0.15);color:var(--lime);}
+
+  .pill{
+    display:inline-block;padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;
+  }
+  .pill.pending{background:var(--amber-bg);color:var(--amber);}
+  .pill.approved{background:var(--green-bg);color:var(--sea);}
+  .pill.rejected{background:var(--red-bg);color:var(--red);}
+  .pill.blank{background:var(--grey-bg);color:var(--ink-soft);}
+
+  .dash-mini{color:var(--ink-soft);}
+  .dash-empty{padding:48px 20px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+  .dash-empty .big{font-size:15px;color:var(--ink);font-weight:600;margin-bottom:4px;}
+  .note{
+    margin-top:16px;font-size:12px;color:var(--sea);background:rgba(47,224,176,0.08);
+    border:1px dashed var(--sea-deep);border-radius:12px;padding:11px 15px;
+  }
+  @media (max-width:640px){
+    .dash-header,.hero,.dash-body{margin-left:16px;margin-right:16px;padding-left:16px;padding-right:16px;}
+    .dash-header{padding-left:16px;padding-right:16px;}
+    .table-wrap{overflow-x:auto;}
+    table{min-width:820px;}
+    .combo-wrap{min-width:100%;}
+  }
+
+  .mapping-toggle-btn{
+    display:inline-flex;align-items:center;gap:7px;
+    margin-top:10px;
+    border:1px solid rgba(255,255,255,0.16);
+    background:rgba(255,255,255,0.05);
+    color:#CFE0E6;
+    padding:7px 13px;
+    border-radius:9px;
+    font-size:12px;font-weight:600;
+    cursor:pointer;
+  }
+  .mapping-toggle-btn:hover{background:rgba(255,255,255,0.1);color:#fff;}
+  .mapping-toggle-btn svg{width:13px;height:13px;stroke:currentColor;}
+
+  .mapping-panel{
+    display:none;
+    padding:0 28px;
+  }
+  .mapping-panel.show{display:block;}
+  .mapping-panel-inner{
+    background:var(--bg-elev);
+    border:1px solid var(--sea-deep);
+    border-radius:16px;
+    padding:20px 22px;
+    margin:16px 0 0;
+  }
+  .mapping-head{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    margin-bottom:16px;
+  }
+  .mapping-title{font-size:15px;font-weight:700;color:#fff;}
+  .mapping-sub{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+  .mapping-close{
+    border:none;background:transparent;color:var(--ink-faint);
+    font-size:16px;cursor:pointer;padding:2px 6px;border-radius:6px;
+  }
+  .mapping-close:hover{color:#fff;background:var(--bg-elev2);}
+
+  .mapping-body{
+    display:grid;grid-template-columns:1.3fr 1fr;gap:20px;
+  }
+  @media (max-width:800px){.mapping-body{grid-template-columns:1fr;}}
+  .mapping-label{font-size:11.5px;text-transform:uppercase;letter-spacing:0.06em;color:var(--sea);font-weight:700;margin-bottom:6px;}
+  .mapping-hint{font-size:12px;color:var(--ink-soft);margin-bottom:8px;line-height:1.5;}
+  .mapping-hint code{background:var(--bg-elev2);padding:1px 5px;border-radius:5px;color:var(--lime);font-size:11.5px;}
+  .mapping-textarea{
+    width:100%;min-height:140px;resize:vertical;
+    background:var(--bg-elev2);border:1px solid var(--line);border-radius:10px;
+    color:var(--ink);font-family:'SF Mono','Roboto Mono',monospace;font-size:12px;
+    padding:10px 12px;box-sizing:border-box;
+  }
+  .mapping-textarea:focus{outline:2px solid var(--lime);outline-offset:1px;}
+  .mapping-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;}
+  .mapping-upload-btn{
+    border:1px solid var(--line);background:var(--bg-elev2);color:var(--ink);
+    padding:8px 14px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .mapping-upload-btn:hover{background:var(--line-soft);}
+  .mapping-save-btn{
+    border:none;background:var(--sea);color:#04161E;
+    padding:8px 16px;border-radius:9px;font-size:12.5px;font-weight:700;cursor:pointer;
+  }
+  .mapping-save-btn:hover{background:var(--lime);}
+  .mapping-clear-btn{
+    border:1px solid var(--line);background:transparent;color:var(--ink-faint);
+    padding:8px 14px;border-radius:9px;font-size:12.5px;cursor:pointer;
+  }
+  .mapping-clear-btn:hover{color:var(--red);border-color:var(--red);}
+  .mapping-save-msg{font-size:12px;color:var(--sea);font-weight:600;}
+  .mapping-coverage{
+    background:var(--bg-elev2);border:1px solid var(--line-soft);border-radius:10px;
+    padding:12px 14px;font-size:13px;color:var(--ink);
+  }
+  .mapping-coverage b{color:var(--lime);}
+  .mapping-unmatched{
+    background:var(--bg-elev2);border:1px solid var(--line-soft);border-radius:10px;
+    padding:12px 14px;font-size:12px;color:var(--ink-soft);
+    max-height:140px;overflow-y:auto;line-height:1.7;
+  }
+  .mapping-unmatched .chip{
+    display:inline-block;background:var(--amber-bg);color:var(--amber);
+    padding:2px 8px;border-radius:999px;margin:2px 4px 2px 0;font-size:11px;font-weight:600;
+  }
+  .mapping-shared-note{
+    margin-top:16px;font-size:11.5px;color:var(--ink-faint);
+    border-top:1px dashed var(--line-soft);padding-top:12px;
+  }
+</style>
+
+<div class="dash-root">
+  <div class="dash-header">
+    <div class="dash-eyebrow">Completion Balance Working File</div>
+    <div class="dash-title">Completion Payment Status</div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-prompt">
+      <div class="h-label">Find your cases</div>
+      <div class="fe-picker">
+        <div class="combo-wrap" id="feCombo">
+          <input type="text" id="feSelectHero" placeholder="Type or pick your name…" autocomplete="off">
+          <svg class="combo-caret" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          <div class="combo-list" id="feComboList"></div>
+        </div>
+        <button class="clear-btn" id="clearFeBtn">Clear</button>
+        <select id="dateSelectHero"><option value="">All completion dates</option></select>
+        <div class="view-toggle">
+          <button id="btnMine" class="active">My cases</button>
+          <button id="btnAll">All cases</button>
+        </div>
+      </div>
+      <div class="greeting" id="greeting"></div>
+      <button class="mapping-toggle-btn" id="mappingToggleBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Team Mapping
+      </button>
+    </div>
+    <div class="hero-stats" id="heroStats"></div>
+  </div>
+
+  <div class="mapping-panel" id="mappingPanel">
+    <div class="mapping-panel-inner">
+      <div class="mapping-head">
+        <div>
+          <div class="mapping-title">FE / DCM / CM / Team / House Mapping</div>
+          <div class="mapping-sub" id="mappingStatus">No mapping loaded yet — using auto-cleaned names only.</div>
+        </div>
+        <button class="mapping-close" id="mappingClose">✕</button>
+      </div>
+
+      <div class="mapping-body">
+        <div class="mapping-col">
+          <div class="mapping-label">Paste or upload a CSV</div>
+          <div class="mapping-hint">Columns, in this order: <code>Raw Name, Standard Name, DCM, CM, Team, House</code>. One row per person. "Raw Name" should match however it appears in the Excel FE column (any known variants can each get their own row). Upload a .csv or .xlsx/.xls file directly — a header row is fine, it's skipped automatically — or paste rows straight into the box below.</div>
+          <textarea id="mappingCsv" class="mapping-textarea" placeholder="Aaqib, Aaqib Mohammed, DCM Name, CM Name, Team A, House 1
+Dithara Galang, Dithara Galanga, DCM Name, CM Name, Team B, House 2
+Dithara Galanga, Dithara Galanga, DCM Name, CM Name, Team B, House 2"></textarea>
+          <div class="mapping-actions">
+            <label class="mapping-upload-btn">
+              Upload CSV or Excel file
+              <input type="file" id="mappingFile" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;">
+            </label>
+            <button class="mapping-save-btn" id="mappingSave">Save mapping</button>
+            <button class="mapping-clear-btn" id="mappingClear">Clear saved mapping</button>
+            <span class="mapping-save-msg" id="mappingSaveMsg"></span>
+          </div>
+        </div>
+
+        <div class="mapping-col">
+          <div class="mapping-label">Coverage</div>
+          <div class="mapping-coverage" id="mappingCoverage">—</div>
+          <div class="mapping-label" style="margin-top:14px;">FE names with no mapping entry yet</div>
+          <div class="mapping-unmatched" id="mappingUnmatched">—</div>
+        </div>
+      </div>
+      <div class="mapping-shared-note">This mapping is saved for everyone using this dashboard — anyone can view or update it here.</div>
+    </div>
+  </div>
+
+  <div class="dash-body">
+    <div class="quick-row">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="caseSearch" placeholder="Search by Case ID…">
+      </div>
+      <button class="more-filters-toggle" id="moreFiltersBtn">
+        More filters
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <button class="clear-btn" id="clearBtn">Clear all</button>
+      <div class="result-count" id="resultCount"></div>
+    </div>
+
+    <div class="more-filters" id="moreFilters">
+      <div class="filter-field">
+        <label for="statusFilter">Approval Status</label>
+        <select id="statusFilter"><option value="">All statuses</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="handlerFilter">Finance Handler</label>
+        <select id="handlerFilter"><option value="">All handlers</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="dcmFilter">DCM</label>
+        <select id="dcmFilter"><option value="">All DCMs</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="cmFilter">CM</label>
+        <select id="cmFilter"><option value="">All CMs</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="teamFilter">Team</label>
+        <select id="teamFilter"><option value="">All teams</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="houseFilter">House</label>
+        <select id="houseFilter"><option value="">All houses</option></select>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="completionDate">Completion Date <span class="arrow">↕</span></th>
+            <th data-key="caseType">Case Type <span class="arrow">↕</span></th>
+            <th data-key="caseId">Case ID <span class="arrow">↕</span></th>
+            <th data-key="feName">FE Name <span class="arrow">↕</span></th>
+            <th data-key="bottleneck1">Bottleneck — Status 1 <span class="arrow">↕</span></th>
+            <th data-key="bottleneck2">Bottleneck — Status 2 <span class="arrow">↕</span></th>
+            <th data-key="approvalStatus">Approval Status <span class="arrow">↕</span></th>
+            <th data-key="financeHandler">Finance Handler <span class="arrow">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="dash-empty" id="emptyState" style="display:none;"></div>
+    </div>
+
+    <div class="note">Live data, synced from your SharePoint workbook every ~10 minutes via Power Automate + GitHub Action. The source table is already scoped to current cases, so nothing here is filtered by date on top of that. FE names come through as typed in Excel — use the Team Mapping panel above to correct spelling variants or add DCM/CM/Team/House info.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  let RAW = [];  // populated at runtime from data.csv — see loadLiveData()
+
+  function parseFe(raw){
+    const m = raw.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    if(m) return { name:m[1].trim(), product:m[2].trim() };
+    return { name:raw.trim(), product:null };
+  }
+
+  // Excel stores dates as a day-count number (serial). Convert back to YYYY-MM-DD.
+  function excelSerialToISO(serial){
+    const n = Number(serial);
+    if(isNaN(n) || n <= 0) return null;
+    const epoch = Date.UTC(1899, 11, 30); // Excel's day-zero
+    const ms = epoch + n * 86400000;
+    const d = new Date(ms);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth()+1).padStart(2,'0');
+    const day = String(d.getUTCDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+
+  // HoldUpReason columns come through as "0" (text or number) when there's no bottleneck.
+  function normalizeBottleneck(v){
+    const s = (v==null ? "" : String(v)).trim();
+    if(s === "" || s === "0") return "-";
+    return s;
+  }
+
+  let DATA = [];
+  let LIVE_DATA_ERROR = null;
+
+  async function loadLiveData(){
+    try{
+      const res = await fetch('./data.csv', {cache:'no-store'});
+      if(!res.ok) throw new Error('data.csv not found (status ' + res.status + ')');
+      const text = await res.text();
+      const parsed = Papa.parse(text, {header:true, skipEmptyLines:true});
+      RAW = parsed.data
+        .filter(row => row['CaseID'] && String(row['CaseID']).trim() !== '' && row['CaseID'] !== '#REF!')
+        .map(row => {
+          const iso = excelSerialToISO(row['CompletionDate']);
+          return {
+            completionDate: iso,
+            caseId: String(row['CaseID']).trim(),
+            caseType: (row['Type'] || 'Unknown').trim(),
+            feNameRaw: (row['FE'] || 'Unassigned').trim(),
+            financeHandler: (row['FinanceHanlder'] || '').trim() || 'Unassigned',
+            bottleneck1: normalizeBottleneck(row['HoldUpReason1']),
+            bottleneck2: normalizeBottleneck(row['HoldUpReason2']),
+            approvalStatus: (row['Approval Status'] || '').trim()
+          };
+        })
+        .filter(r => r.completionDate); // drop rows with an unreadable date
+      LIVE_DATA_ERROR = null;
+    } catch(e){
+      RAW = [];
+      LIVE_DATA_ERROR = e.message;
+    }
+  }
+
+  function buildData(){
+    DATA = RAW.map(r=>{
+      const {name, product} = parseFe(r.feNameRaw);
+      return {...r, feName:name, feProduct:product};
+    });
+  }
+
+  function pillClass(status){
+    const s=(status||"").toLowerCase();
+    if(s.includes("pending")) return "pending";
+    if(s.includes("approved")) return "approved";
+    if(s.includes("reject")) return "rejected";
+    return "blank";
+  }
+  function needsAttention(r){
+    return pillClass(r.approvalStatus)==="pending" || r.bottleneck1!=="-" || r.bottleneck2!=="-";
+  }
+  function fmtDate(iso){
+    const d=new Date(iso+"T00:00:00");
+    if(isNaN(d)) return iso;
+    return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
+  let sortKey="completionDate", sortDir=1;
+  let mineMode=true;
+
+  const feSelectHero=document.getElementById('feSelectHero');
+  const feCombo=document.getElementById('feCombo');
+  const feComboList=document.getElementById('feComboList');
+  const dateSelectHero=document.getElementById('dateSelectHero');
+  const btnMine=document.getElementById('btnMine');
+  const btnAll=document.getElementById('btnAll');
+  const greeting=document.getElementById('greeting');
+  const heroStats=document.getElementById('heroStats');
+  const caseSearch=document.getElementById('caseSearch');
+  const statusFilter=document.getElementById('statusFilter');
+  const handlerFilter=document.getElementById('handlerFilter');
+  const moreFiltersBtn=document.getElementById('moreFiltersBtn');
+  const moreFilters=document.getElementById('moreFilters');
+  const tableBody=document.getElementById('tableBody');
+  const resultCount=document.getElementById('resultCount');
+  const emptyState=document.getElementById('emptyState');
+  const dcmFilter=document.getElementById('dcmFilter');
+  const cmFilter=document.getElementById('cmFilter');
+  const teamFilter=document.getElementById('teamFilter');
+  const houseFilter=document.getElementById('houseFilter');
+  const mappingToggleBtn=document.getElementById('mappingToggleBtn');
+  const mappingPanel=document.getElementById('mappingPanel');
+  const mappingClose=document.getElementById('mappingClose');
+  const mappingCsv=document.getElementById('mappingCsv');
+  const mappingFile=document.getElementById('mappingFile');
+  const mappingSave=document.getElementById('mappingSave');
+  const mappingClear=document.getElementById('mappingClear');
+  const mappingSaveMsg=document.getElementById('mappingSaveMsg');
+  const mappingStatus=document.getElementById('mappingStatus');
+  const mappingCoverage=document.getElementById('mappingCoverage');
+  const mappingUnmatched=document.getElementById('mappingUnmatched');
+
+  let TEAM_MAPPING = {}; // keyed by lowercased feName -> {standardName,dcm,cm,team,house}
+
+  let FE_NAMES=[];
+  let selectedFe="";
+  let comboActiveIndex=-1;
+
+  function uniqueSorted(arr){ return [...new Set(arr)].sort(); }
+
+  // ---- Team mapping (persisted via window.storage, shared) ----
+  const MAPPING_KEY = 'fe_team_mapping_v1';
+
+  function parseMappingCsv(text){
+    const map = {};
+    const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    for(const line of lines){
+      const parts = line.split(',').map(p=>p.trim());
+      if(parts.length < 2) continue;
+      const [rawName, standardName, dcm, cm, team, house] = parts;
+      if(!rawName) continue;
+      map[rawName.toLowerCase()] = {
+        standardName: standardName || rawName,
+        dcm: dcm || '',
+        cm: cm || '',
+        team: team || '',
+        house: house || ''
+      };
+    }
+    return map;
+  }
+
+  function applyMapping(){
+    let matched = 0;
+    DATA.forEach(r=>{
+      const entry = TEAM_MAPPING[r.feName.toLowerCase()];
+      if(entry){
+        r.feDisplay = entry.standardName;
+        r.dcm = entry.dcm;
+        r.cm = entry.cm;
+        r.team = entry.team;
+        r.house = entry.house;
+        matched++;
+      } else {
+        r.feDisplay = r.feName;
+        r.dcm = ''; r.cm = ''; r.team = ''; r.house = '';
+      }
+    });
+    return matched;
+  }
+
+  function renderMappingStatus(){
+    const mappingCount = Object.keys(TEAM_MAPPING).length;
+    const matched = applyMapping();
+    const uniqueFeCount = FE_NAMES.length;
+
+    if(mappingCount === 0){
+      mappingStatus.textContent = "No mapping loaded yet — using auto-cleaned names only.";
+      mappingCoverage.innerHTML = `<b>0</b> of <b>${uniqueFeCount}</b> FE names mapped.`;
+    } else {
+      mappingStatus.textContent = `${mappingCount} mapping rows loaded — shared with everyone using this dashboard.`;
+      mappingCoverage.innerHTML = `<b>${matched}</b> of <b>${uniqueFeCount}</b> FE names have a mapping entry.`;
+    }
+
+    const unmatched = FE_NAMES.filter(n => !TEAM_MAPPING[n.toLowerCase()]);
+    if(unmatched.length === 0 && mappingCount > 0){
+      mappingUnmatched.innerHTML = `<span style="color:var(--sea)">All FE names are mapped 🎉</span>`;
+    } else if(unmatched.length === 0){
+      mappingUnmatched.textContent = "—";
+    } else {
+      mappingUnmatched.innerHTML = unmatched.map(n=>`<span class="chip">${n}</span>`).join('');
+    }
+  }
+
+  async function loadMapping(){
+    try{
+      const result = await window.storage.get(MAPPING_KEY, true);
+      if(result && result.value){
+        TEAM_MAPPING = JSON.parse(result.value);
+      }
+    } catch(e){
+      TEAM_MAPPING = {};
+    }
+  }
+
+  async function saveMapping(csvText){
+    const parsed = parseMappingCsv(csvText);
+    if(Object.keys(parsed).length === 0){
+      mappingSaveMsg.textContent = "Nothing to save — check the format.";
+      mappingSaveMsg.style.color = "var(--red)";
+      return;
+    }
+    try{
+      const result = await window.storage.set(MAPPING_KEY, JSON.stringify(parsed), true);
+      if(!result) throw new Error('save failed');
+      TEAM_MAPPING = parsed;
+      mappingSaveMsg.textContent = `Saved (${Object.keys(parsed).length} rows).`;
+      mappingSaveMsg.style.color = "var(--sea)";
+      populateSecondaryMappingFilters();
+      renderMappingStatus();
+      renderTable();
+    } catch(e){
+      mappingSaveMsg.textContent = "Couldn't save — try again.";
+      mappingSaveMsg.style.color = "var(--red)";
+    }
+  }
+
+  async function clearMapping(){
+    try{
+      await window.storage.delete(MAPPING_KEY, true);
+    } catch(e){ /* ignore if already empty */ }
+    TEAM_MAPPING = {};
+    mappingCsv.value = "";
+    mappingSaveMsg.textContent = "Mapping cleared.";
+    mappingSaveMsg.style.color = "var(--ink-soft)";
+    populateSecondaryMappingFilters();
+    renderMappingStatus();
+    renderTable();
+  }
+
+  function populateSecondaryMappingFilters(){
+    [dcmFilter, cmFilter, teamFilter, houseFilter].forEach(sel=>{
+      while(sel.options.length > 1) sel.remove(1);
+    });
+    uniqueSorted(DATA.map(d=>d.dcm).filter(Boolean)).forEach(v=>{
+      const o=document.createElement('option'); o.value=v; o.textContent=v; dcmFilter.appendChild(o);
+    });
+    uniqueSorted(DATA.map(d=>d.cm).filter(Boolean)).forEach(v=>{
+      const o=document.createElement('option'); o.value=v; o.textContent=v; cmFilter.appendChild(o);
+    });
+    uniqueSorted(DATA.map(d=>d.team).filter(Boolean)).forEach(v=>{
+      const o=document.createElement('option'); o.value=v; o.textContent=v; teamFilter.appendChild(o);
+    });
+    uniqueSorted(DATA.map(d=>d.house).filter(Boolean)).forEach(v=>{
+      const o=document.createElement('option'); o.value=v; o.textContent=v; houseFilter.appendChild(o);
+    });
+  }
+
+  mappingToggleBtn.addEventListener('click', ()=>{
+    mappingPanel.classList.toggle('show');
+  });
+  mappingClose.addEventListener('click', ()=> mappingPanel.classList.remove('show'));
+  mappingFile.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const name = file.name.toLowerCase();
+    const isExcel = name.endsWith('.xlsx') || name.endsWith('.xls');
+
+    if(isExcel){
+      const reader = new FileReader();
+      reader.onload = (ev)=>{
+        try{
+          const data = new Uint8Array(ev.target.result);
+          const wb = XLSX.read(data, {type:'array'});
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          let rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+          rows = rows.filter(r => r.some(c => String(c).trim() !== ''));
+          if(rows.length){
+            const firstCell = String(rows[0][0] || '').trim().toLowerCase();
+            if(firstCell.includes('raw name') || firstCell === 'name' || firstCell === 'fe'){
+              rows = rows.slice(1); // drop header row
+            }
+          }
+          const csvText = rows.map(r => r.slice(0,6).map(c => String(c).trim()).join(', ')).join('\n');
+          mappingCsv.value = csvText;
+          mappingSaveMsg.textContent = `Loaded ${rows.length} rows from ${file.name} — review below, then Save mapping.`;
+          mappingSaveMsg.style.color = "var(--sea)";
+        } catch(err){
+          mappingSaveMsg.textContent = "Couldn't read that Excel file — make sure it's a standard .xlsx/.xls and try again.";
+          mappingSaveMsg.style.color = "var(--red)";
+        }
+      };
+      reader.onerror = ()=>{ mappingSaveMsg.textContent = "Couldn't read that file."; mappingSaveMsg.style.color = "var(--red)"; };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (ev)=>{ mappingCsv.value = ev.target.result; };
+      reader.onerror = ()=>{ mappingSaveMsg.textContent = "Couldn't read that file."; mappingSaveMsg.style.color = "var(--red)"; };
+      reader.readAsText(file);
+    }
+  });
+  mappingSave.addEventListener('click', ()=> saveMapping(mappingCsv.value));
+  mappingClear.addEventListener('click', clearMapping);
+
+  function populateFilters(){
+    FE_NAMES = uniqueSorted(DATA.map(d=>d.feName));
+    uniqueSorted(DATA.map(d=>d.completionDate)).forEach(v=>{
+      const o=document.createElement('option'); o.value=v; o.textContent=fmtDate(v);
+      dateSelectHero.appendChild(o);
+    });
+    uniqueSorted(DATA.map(d=>d.approvalStatus)).forEach(v=>{
+      const o=document.createElement('option'); o.value=v; o.textContent=v;
+      statusFilter.appendChild(o);
+    });
+    uniqueSorted(DATA.map(d=>d.financeHandler)).forEach(v=>{
+      const o=document.createElement('option'); o.value=v; o.textContent=v;
+      handlerFilter.appendChild(o);
+    });
+  }
+
+  function highlightMatch(name, query){
+    if(!query) return name;
+    const i = name.toLowerCase().indexOf(query.toLowerCase());
+    if(i===-1) return name;
+    return name.slice(0,i) + '<span class="combo-match">' + name.slice(i,i+query.length) + '</span>' + name.slice(i+query.length);
+  }
+
+  function renderComboList(){
+    const q = feSelectHero.value.trim();
+    const matches = q ? FE_NAMES.filter(n=>n.toLowerCase().includes(q.toLowerCase())) : FE_NAMES;
+    comboActiveIndex = matches.length ? 0 : -1;
+    let html = "";
+    if(selectedFe){
+      html += `<div class="combo-option clear-option" data-value="">Clear selection — show all FEs</div>`;
+    }
+    if(matches.length===0){
+      html += `<div class="combo-empty">No FE matches "${q}"</div>`;
+    } else {
+      matches.slice(0,60).forEach((n,idx)=>{
+        html += `<div class="combo-option${idx===0?' active':''}" data-value="${n.replace(/"/g,'&quot;')}">${highlightMatch(n,q)}</div>`;
+      });
+    }
+    feComboList.innerHTML = html;
+  }
+
+  function openCombo(){
+    renderComboList();
+    feComboList.classList.add('show');
+  }
+  function closeCombo(){
+    feComboList.classList.remove('show');
+  }
+  function selectFe(name){
+    selectedFe = name;
+    feSelectHero.value = name;
+    closeCombo();
+    renderTable();
+  }
+
+  feSelectHero.addEventListener('focus', openCombo);
+  feSelectHero.addEventListener('input', openCombo);
+  feSelectHero.addEventListener('keydown', (e)=>{
+    const opts = [...feComboList.querySelectorAll('.combo-option')];
+    if(e.key==='Escape'){ feSelectHero.value = selectedFe; closeCombo(); return; }
+    if(e.key==='Enter'){
+      e.preventDefault();
+      const active = feComboList.querySelector('.combo-option.active');
+      if(active) selectFe(active.getAttribute('data-value'));
+      return;
+    }
+    if(e.key==='ArrowDown' || e.key==='ArrowUp'){
+      e.preventDefault();
+      if(!opts.length) return;
+      let idx = opts.findIndex(o=>o.classList.contains('active'));
+      idx = e.key==='ArrowDown' ? Math.min(idx+1, opts.length-1) : Math.max(idx-1, 0);
+      opts.forEach(o=>o.classList.remove('active'));
+      opts[idx].classList.add('active');
+      opts[idx].scrollIntoView({block:'nearest'});
+    }
+  });
+  feComboList.addEventListener('mousedown', (e)=>{
+    const opt = e.target.closest('.combo-option');
+    if(opt) selectFe(opt.getAttribute('data-value'));
+  });
+  document.addEventListener('click', (e)=>{
+    if(!feCombo.contains(e.target)){
+      feSelectHero.value = selectedFe;
+      closeCombo();
+    }
+  });
+
+  function getFeFiltered(){
+    if(!mineMode || !selectedFe) return DATA;
+    return DATA.filter(d=>d.feName===selectedFe);
+  }
+
+  function getFiltered(){
+    const q = caseSearch.value.trim().toLowerCase();
+    return getFeFiltered().filter(d=>{
+      if(q && !d.caseId.toLowerCase().includes(q)) return false;
+      if(dateSelectHero.value && d.completionDate!==dateSelectHero.value) return false;
+      if(statusFilter.value && d.approvalStatus!==statusFilter.value) return false;
+      if(handlerFilter.value && d.financeHandler!==handlerFilter.value) return false;
+      if(dcmFilter.value && d.dcm!==dcmFilter.value) return false;
+      if(cmFilter.value && d.cm!==cmFilter.value) return false;
+      if(teamFilter.value && d.team!==teamFilter.value) return false;
+      if(houseFilter.value && d.house!==houseFilter.value) return false;
+      return true;
+    }).sort((a,b)=>{
+      if(sortKey==="completionDate"){
+        // needs-attention cases float first within personal view
+        const na = (needsAttention(b)?1:0) - (needsAttention(a)?1:0);
+        if(mineMode && na!==0) return na;
+      }
+      const av=(a[sortKey]||"").toString(), bv=(b[sortKey]||"").toString();
+      return av.localeCompare(bv)*sortDir;
+    });
+  }
+
+  function renderHero(){
+    const rows = getFeFiltered();
+    const pending=rows.filter(r=>pillClass(r.approvalStatus)==="pending").length;
+    const approved=rows.filter(r=>pillClass(r.approvalStatus)==="approved").length;
+    const blocked=rows.filter(r=>r.bottleneck1!=="-"||r.bottleneck2!=="-").length;
+
+    heroStats.innerHTML = `
+      <div class="hstat"><div class="n">${rows.length}</div><div class="l">Total</div></div>
+      <div class="hstat pending"><div class="n">${pending}</div><div class="l">Pending</div></div>
+      <div class="hstat blocked"><div class="n">${blocked}</div><div class="l">Bottleneck</div></div>
+      <div class="hstat approved"><div class="n">${approved}</div><div class="l">Approved</div></div>
+    `;
+
+    if(mineMode && selectedFe){
+      greeting.innerHTML = pending>0
+        ? `Hi <b>${selectedFe}</b> — you have <b>${pending}</b> case${pending===1?"":"s"} waiting on approval.`
+        : `Hi <b>${selectedFe}</b> — nothing pending right now.`;
+    } else {
+      greeting.textContent = "Showing every case in the file.";
+    }
+  }
+
+  function renderTable(){
+    const rows=getFiltered();
+    renderHero();
+    resultCount.textContent=rows.length+(rows.length===1?" case":" cases");
+
+    if(rows.length===0){
+      tableBody.innerHTML="";
+      emptyState.innerHTML = `<div class="big">No cases here</div>Try clearing a filter or switching to "All cases."`;
+      emptyState.style.display="block";
+      return;
+    }
+    emptyState.style.display="none";
+
+    tableBody.innerHTML=rows.map(r=>`
+      <tr class="${needsAttention(r) && mineMode ? 'needs-attention' : ''}">
+        <td>${fmtDate(r.completionDate)}</td>
+        <td class="dash-mini">${r.caseType}</td>
+        <td class="case-id">${r.caseId}</td>
+        <td><span class="fe-name">${r.feDisplay || r.feName}</span>${r.feProduct?`<span class="product-badge ${r.feProduct.toLowerCase()}">${r.feProduct}</span>`:""}${r.team?`<div class="dash-mini" style="font-size:11px;">${[r.team,r.house].filter(Boolean).join(' · ')}</div>`:""}</td>
+        <td class="dash-mini">${r.bottleneck1}</td>
+        <td class="dash-mini">${r.bottleneck2}</td>
+        <td><span class="pill ${pillClass(r.approvalStatus)}">${r.approvalStatus}</span></td>
+        <td>${r.financeHandler}</td>
+      </tr>
+    `).join("");
+  }
+
+  document.querySelectorAll('thead th').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const key=th.getAttribute('data-key');
+      if(sortKey===key){ sortDir*=-1; } else { sortKey=key; sortDir=1; }
+      renderTable();
+    });
+  });
+
+  dateSelectHero.addEventListener('change', renderTable);
+  caseSearch.addEventListener('input', renderTable);
+  [statusFilter,handlerFilter,dcmFilter,cmFilter,teamFilter,houseFilter].forEach(el=>el.addEventListener('change',renderTable));
+
+  btnMine.addEventListener('click', ()=>{
+    mineMode=true; btnMine.classList.add('active'); btnAll.classList.remove('active');
+    renderTable();
+  });
+  btnAll.addEventListener('click', ()=>{
+    mineMode=false; btnAll.classList.add('active'); btnMine.classList.remove('active');
+    renderTable();
+  });
+
+  moreFiltersBtn.addEventListener('click', ()=>{
+    moreFilters.classList.toggle('show');
+    moreFiltersBtn.classList.toggle('open');
+  });
+
+  document.getElementById('clearFeBtn').addEventListener('click', ()=>{
+    selectedFe=""; feSelectHero.value="";
+    closeCombo();
+    renderTable();
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', ()=>{
+    caseSearch.value=""; dateSelectHero.value=""; statusFilter.value=""; handlerFilter.value="";
+    dcmFilter.value=""; cmFilter.value=""; teamFilter.value=""; houseFilter.value="";
+    selectedFe=""; feSelectHero.value="";
+    renderTable();
+  });
+
+  (async function init(){
+    await loadLiveData();
+    buildData();
+    populateFilters();
+    await loadMapping();
+    applyMapping();
+    populateSecondaryMappingFilters();
+    renderMappingStatus();
+    selectedFe = FE_NAMES[0] || "";
+    feSelectHero.value = selectedFe;
+    if(LIVE_DATA_ERROR){
+      resultCount.textContent = "";
+      emptyState.innerHTML = `<div class="big">Live data not available yet</div>Couldn't load data.csv (${LIVE_DATA_ERROR}). This is expected if the sync job hasn't run yet — check back in a few minutes, or confirm the GitHub Action ran successfully.`;
+      emptyState.style.display = "block";
+      tableBody.innerHTML = "";
+    } else {
+      renderTable();
+    }
+  })();
+})();
+</script>
