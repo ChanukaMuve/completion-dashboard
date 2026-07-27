@@ -14,18 +14,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download latest export
+      - name: Download latest export (with diagnostics)
         run: |
-          curl -L "https://contactlaw.sharepoint.com/:x:/s/PaymentsReceived/IQAgUP_DcUh6TKqOZjFFK6bkAaANwkhgjXfFrvUR7kcxVVg?e=BYEMzV&download=1" -o data.csv
+          curl -sSL -D headers.txt -o data.csv "https://contactlaw.sharepoint.com/:x:/s/PaymentsReceived/IQAgUP_DcUh6TKqOZjFFK6bkAaANwkhgjXfFrvUR7kcxVVg?e=BYEMzV&download=1"
+          echo "===== RESPONSE HEADERS / REDIRECT CHAIN ====="
+          cat headers.txt
+          echo "===== FILE SIZE ====="
+          wc -c data.csv
+          echo "===== FIRST 300 CHARACTERS OF BODY ====="
+          head -c 300 data.csv
 
       - name: Sanity-check the download
         run: |
-          if head -c 100 data.csv | grep -qi "<!DOCTYPE\|<html"; then
-            echo "::error::Downloaded file looks like an HTML login page, not CSV. The SharePoint link likely needs authentication that curl doesn't have."
-            cat data.csv
+          SIZE=$(wc -c < data.csv)
+          if [ "$SIZE" -lt 50 ]; then
+            echo "::error::Downloaded file is suspiciously small ($SIZE bytes) — likely not real data. Check the diagnostics above."
             exit 1
           fi
-          echo "Download looks like real data:"
+          if head -c 100 data.csv | grep -qi "<!DOCTYPE\|<html"; then
+            echo "::error::Downloaded file looks like an HTML login page, not CSV."
+            exit 1
+          fi
+          echo "Download looks like real data ($SIZE bytes):"
           head -3 data.csv
 
       - name: Commit if changed
